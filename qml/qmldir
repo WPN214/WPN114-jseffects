@@ -1,5 +1,5 @@
 module WPN114.Audio.JSEffects
-typeinfo plugins.qmltypes
+typeinfo jseffects.qmltypes
 plugin WPN114-jseffects
 classname qml_plugin
 depends WPN114.Audio 1.0

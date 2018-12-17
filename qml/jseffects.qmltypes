@@ -1,0 +1,34 @@
+import QtQuick.tooling 1.2
+
+Module
+{
+    Component
+    {
+        name: "Mangler"
+        prototype: "StreamNode"
+        exports: ["WPN114.Audio.JSEffects/Mangler 1.0"]
+
+        Property { name: "inputGain"; type: "qreal" }
+        Property { name: "wetOut"; type: "qreal" }
+        Property { name: "dryOut"; type: "qreal" }
+        Property { name: "badResampler"; type: "qreal" }
+        Property { name: "thermonuclear"; type: "qreal" }
+        Property { name: "gate"; type: "qreal" }
+        Property { name: "love"; type: "qreal" }
+        Property { name: "jive"; type: "qreal" }
+        Property { name: "bitcrusher"; type: "int" }
+        Property { name: "bitdepth"; type: "int" }
+        Property { name: "attitude"; type: "int" }
+    }
+
+    Component
+    {
+        name: "HLPFilter"
+        prototype: "StreamNode"
+        exports: ["WPN114.Audio.JSEffects/HLPFilter 1.0"]
+
+        Property { name: "hpf"; type: "qreal" }
+        Property { name: "lpf"; type: "qreal" }
+
+    }
+}

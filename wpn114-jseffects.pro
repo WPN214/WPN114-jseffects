@@ -4,6 +4,7 @@ CONFIG += c++11 dll
 QT += quick
 
 QMLDIR_FILES += $$PWD/qml/qmldir
+QMLDIR_FILES += $$PWD/qml/jseffects.qmltypes
 
 localmod: DESTDIR = $$QML_MODULE_DESTDIR/WPN114/Audio/JSEffects
 else {
@@ -18,7 +19,7 @@ for(FILE,QMLDIR_FILES) {
 WPN114_AUDIO_REPOSITORY = ../WPN114-audio
 INCLUDEPATH += $$WPN114_AUDIO_REPOSITORY
 LIBS += -L$$QML_MODULE_DESTDIR/WPN114/Audio -lWPN114-audio
-QMAKE_LFLAGS += -Wl,-rpath,$$QML_MODULE_DESTDIR/WPN114/Audio
+QMAKE_RPATHDIR += $$QML_MODULE_DESTDIR/WPN114/Audio
 
 HEADERS += $$PWD/source/hlpf/filter.hpp
 HEADERS += $$PWD/source/mangler/mangler.hpp
