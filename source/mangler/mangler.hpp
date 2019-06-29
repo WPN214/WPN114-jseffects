@@ -8,6 +8,12 @@
 #include <wpn114audio/graph.hpp>
 #include <cmath>
 
+#define fOR(_lhs, _rhs) \
+    static_cast<float>(static_cast<int>(_lhs) | static_cast<int>(_rhs))
+
+#define fAND(_lhs, _rhs) \
+    static_cast<float>(static_cast<int>(_lhs) & static_cast<int>(_rhs))
+
 //-------------------------------------------------------------------------------------------------
 class Mangler : public Node
 //-------------------------------------------------------------------------------------------------
@@ -31,9 +37,6 @@ class Mangler : public Node
 
     enum inputs { audio_in, input_gain, dry, wet, resampler, bitcrusher, thermonuclear,
                   bitdepth, gate, love, jive, attitude };
-
-    sample_t
-    m_srate = 0;
 
 public:
     //-------------------------------------------------------------------------------------------------
@@ -101,39 +104,46 @@ public:
 
         auto audio_out      = outputs.audio[0];
 
+        auto thermonuclear_f = thermonuclear[0];
+        auto gate_f = gate[0];
+        auto bitdepth_f = bitdepth[0];
+        auto resampler_f = resampler[0];
+        auto dry_f = dry[0];
+        auto wet_f = wet[0];
+        auto gain_f = input_gain[0];
+
 
         // gate parameters -----------------------------------------------------
-        float gate_amt          = m_gate/100.f;
+        float gate_amt          = gate_f/100.f;
         float gate_open_time    = (0.05f + (1.f-gate_amt)*0.3f) * srate;
         float fade_point        = gate_open_time*0.5f;
         float gate_threshold    = 0.15f + gate_amt * 0.25f;
         float gate_leakage      = (gate_amt > 0.5f) ? 0 : (1.f-gate_amt)*0.2f;
 
-        int bitdepth            = m_bitdepth;
-        int resol               = std::pow( 2, bitdepth-1 );
+        int resol               = std::pow(2.f, bitdepth_f-1.f);
         float invresl           = 1.f/resol;
-        float target_per_sample = (float) srate/m_bad_resampler;
+        float target_per_sample = (float) srate/resampler_f;
 
-        float gain              = pow( 2, m_input_gain/6 );
-        float dry_gain          = pow( 2, m_dry_out/6 );
-        float wet_gain          = pow( 2, m_wet_out/6 );
+        float gain              = std::pow(2.f, gain_f/6.f);
+        float dry_gain          = std::pow(2.f, dry_f/6.f);
+        float wet_gain          = std::pow(2.f, wet_f/6.f);
 
         // LOOKUP -----------------------------------------------------------------------
 
-        int left_bit_slider     = (int) m_thermonuclear | 0;
-        float mix               = m_thermonuclear-(float)left_bit_slider;
+        int left_bit_slider     = (int) thermonuclear_f | 0;
+        float mix               = thermonuclear_f-(float)left_bit_slider;
         int right_bit_slider    = ( mix > 0 ) ? left_bit_slider + 1 : left_bit_slider;
 
         int bit_1 = left_bit_slider*16;
         int bit_2 = right_bit_slider*16;
 
-        if (bitdepth < 8) {
-            bit_1 += 8-bitdepth;
-            bit_2 += 8-bitdepth;
+        if (bitdepth_f < 8) {
+            bit_1 += 8-bitdepth_f;
+            bit_2 += 8-bitdepth_f;
         }
         else
         {
-            for ( quint8 b = 0; b < (bitdepth-8); ++b )
+            for ( quint8 b = 0; b < (bitdepth_f-8); ++b )
             {
                 bit_1--;
                 bit_2--;
@@ -148,7 +158,7 @@ public:
         float clear_mask_1  = 0, clear_mask_2   = 0;
         float xor_mask_1    = 0, xor_mask_2     = 0;
 
-        for (uint32_t i = 0; i < bitdepth; ++i)
+        for (uint32_t i = 0; i < bitdepth_f; ++i)
         {
             if (lut[bit_1+i] == 0)
                 clear_mask_1 = fOR(clear_mask_1, pow(2, i));
@@ -240,7 +250,7 @@ public:
                 // boost to positive range, -resol to +resol-1
                 else
                 {
-                    auto bitdepth_f = bitdepth[f];
+                    bitdepth_f = bitdepth[f];
 
                     f0 = (int)(f0*resol) | 0;
                     f1 = (int)(f1*resol) | 0;
@@ -259,16 +269,23 @@ public:
                 {
                     float
                     f0A = fAND(f0, 1023.f-clear_mask_1);
-                    f0A = fOR(fAND(f0A, 1023.f-xor_mask_1), fAND(1023.f-f0A, xor_mask_1 ));
+                    f0A = fOR(fAND(f0A, 1023.f-xor_mask_1),
+                              fAND(1023.f-f0A, xor_mask_1));
 
-                    float f1A = fAND( f1, 1023.f-clear_mask_1 );
-                    f1A = fOR( fAND( f1A, 1023.f-xor_mask_1), fAND(1023.f-f1A, xor_mask_1 ));
+                    float
+                    f1A = fAND(f1, 1023.f-clear_mask_1);
+                    f1A = fOR(fAND( f1A, 1023.f-xor_mask_1),
+                              fAND(1023.f-f1A, xor_mask_1));
 
-                    float f0B = fAND( f0, 1023.f-clear_mask_2 );
-                    f0B = fOR( fAND(f0B, 1023.f-xor_mask_2), fAND(1023.f-f0B, xor_mask_2 ));
+                    float
+                    f0B = fAND(f0, 1023.f-clear_mask_2);
+                    f0B = fOR(fAND(f0B, 1023.f-xor_mask_2),
+                              fAND(1023.f-f0B, xor_mask_2));
 
-                    float f1B = fAND( f1, 1023.f-clear_mask_2 );
-                    f1B = fOR( fAND( f1B, 1023.f-xor_mask_2), fAND(1023.f-f1B, xor_mask_2 ));
+                    float
+                    f1B = fAND(f1, 1023.f-clear_mask_2);
+                    f1B = fOR(fAND(f1B, 1023.f-xor_mask_2),
+                              fAND(1023.f-f1B, xor_mask_2));
 
                     f0 = f0A * (1.f-mix) + f0B * mix;
                     f1 = f1A * (1.f-mix) + f1B * mix;
@@ -319,12 +336,17 @@ public:
             f0 *= wet_gain;
             f1 *= wet_gain;
 
-            f0 = (1.f+shaper_amt_2) *f0/(1.f+shaper_amt_2*fabs(f0));
-            f1 = (1.f+shaper_amt_2) *f1/(1.f+shaper_amt_2*fabs(f1));
+            f0 = (1.f+shaper_amt_2)*f0/(1.f+shaper_amt_2*fabs(f0));
+            f1 = (1.f+shaper_amt_2)*f1/(1.f+shaper_amt_2*fabs(f1));
 
             // dcfilter --------------------------------------
-            otm1 = 0.99f*otm1+f0-itm1; itm1 = f0; f0 = otm1;
-            otm2 = 0.99f*otm2+f1-itm2; itm2 = f1; f1 = otm2;
+            otm1 = 0.99f*otm1+f0-itm1;
+            itm1 = f0;
+            f0 = otm1;
+
+            otm2 = 0.99f*otm2+f1-itm2;
+            itm2 = f1;
+            f1 = otm2;
 
             // try and handle weird bit pattern supergain
             if (bitcrusher_f > 0) {
@@ -360,14 +382,16 @@ private:
     dcshift = 1;
 
     sample_t
-    relgain[17] = { 1, 1, 1, 1,
-                    1, 1, 1, 0.4f,
-                    0.08f, 0.5f, 0.08f, 1.5f,
-                    3, 0.2f, 2, 1, 1 };
+    relgain[17] =  {
+      1, 1, 1, 1,
+      1, 1, 1, 0.4f,
+      0.08f, 0.5f, 0.08f, 1.5f,
+      3, 0.2f, 2, 1, 1
+    };
 
     sample_t
-    shaper_amt = 0.857f,
-    shaper_amt_2 = 0.9f;
+    shaper_amt      = 0.857f,
+    shaper_amt_2    = 0.9f;
 
     sample_t
     sample_csr  = 0,
@@ -377,10 +401,13 @@ private:
     next_sample = 0;
 
     sample_t
-    v0L = 0.f   , v0R = 0.f,
-    v1L = 0.f   , v1R = 0.f,
-    hv0L = 0.f  , hv0R = 0.f,
-    hv1L = 0.f  , hv1R = 0.f;
+    v0L = 0.f,  v0R = 0.f,
+    v1L = 0.f,  v1R = 0.f,
+    hv0L = 0.f, hv0R = 0.f,
+    hv1L = 0.f, hv1R = 0.f;
+
+    sample_t
+    m_srate = 0;
 };
 
 #endif // MANGLER_HPP
