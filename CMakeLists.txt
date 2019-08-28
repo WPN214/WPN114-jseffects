@@ -1,29 +1,43 @@
 cmake_minimum_required(VERSION 3.1)
-project(wpn114jseffects-qml LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 14)
+set(WPN114_ADDON Js)
+# -------------------------------------------------------------------------------------------------
+
+string(TOLOWER ${WPN114_ADDON} WPN114_ADDON_LOWER)
+string(CONCAT WPN114_PROJECT_NAME wpn114 ${WPN114_ADDON_LOWER})
+
+project(${WPN114_PROJECT_NAME} LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
-set(CMAKE_CXX_LINK_FLAGS)
+set(CMAKE_AUTORCC ON)
+
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 find_package(Qt5 REQUIRED COMPONENTS Quick Core Qml)
+find_package(WPN114 REQUIRED COMPONENTS Audio)
 
-set(WPN114JSEFFECTS_QML_SOURCES
-    qml_plugin.cpp
-    source/hlpf/filter.hpp
-    source/mangler/mangler.hpp
-    )
+# SOURCES -----------------------------------------------------------------------------------------
 
-if (UNIX AND NOT APPLE)
-    set(WPN114_ROOT /usr/lib/qt/qml/WPN114)
-    set(WPN114AUDIO_ROOT ${WPN114_ROOT}/Audio)
-    set(WPN114AUDIO_INCLUDE ${WPN114AUDIO_ROOT}/include)
-endif()
+set(WPN114_ADDON_SOURCE_DIR source)
+set(WPN114_ADDON_QML_DIR qml)
+set(WPN114_ADDON_SOURCES
+    ${WPN114_ADDON_SOURCE_DIR}/mangler/mangler.hpp
+    ${WPN114_ADDON_QML_DIR}/qmldir
+    ${WPN114_ADDON_QML_DIR}/${WPN114_ADDON_LOWER}.qmltypes
+    qml_plugin.cpp)
 
+# PROJECT -----------------------------------------------------------------------------------------
 
-add_library(${PROJECT_NAME} SHARED ${WPN114JSEFFECTS_QML_SOURCES})
-target_link_libraries(${PROJECT_NAME} Qt5::Core Qt5::Quick Qt5::Qml -L${WPN114AUDIO_ROOT} -lwpn114audio-qml)
-target_include_directories(${PROJECT_NAME} PUBLIC ${WPN114AUDIO_INCLUDE})
+#add_subdirectory(examples)
+add_library(${PROJECT_NAME} SHARED ${WPN114_ADDON_SOURCES})
+target_link_libraries(${PROJECT_NAME} Qt5::Core Qt5::Quick Qt5::Qml WPN114::Audio)
 
-install(TARGETS ${PROJECT_NAME} DESTINATION ${WPN114AUDIO_ROOT}/JSEffects)
-install(FILES qml/jseffects.qmltypes qml/qmldir DESTINATION ${WPN114AUDIO_ROOT}/JSEffects)
+# INSTALL -----------------------------------------------------------------------------------------
+message("[WPN114] Library will be installed in ${WPN114_AUDIO_ROOT}/${WPN114_ADDON}")
+
+install(TARGETS ${PROJECT_NAME} DESTINATION ${WPN114_AUDIO_ROOT}/${WPN114_ADDON})
+install(FILES qml/${WPN114_ADDON_LOWER}.qmltypes qml/qmldir DESTINATION ${WPN114_AUDIO_ROOT}/${WPN114_ADDON})
